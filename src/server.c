@@ -188,6 +188,9 @@ static int send_all(int fd, const void *buf, size_t len) {
             }
             return -1;
         }
+        if (sent == 0) {
+            return -1;
+        }
         total_sent += (size_t)sent;
     }
 
