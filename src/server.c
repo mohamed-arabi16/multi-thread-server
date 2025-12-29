@@ -17,6 +17,14 @@
 #define REQUEST_BUFFER_SIZE 4096
 #define FILE_BUFFER_SIZE 8192
 
+// Macros for stringification to ensure format string matches buffer size
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#define PATH_MAX_LEN 1023
+#define PATH_BUF_SIZE (PATH_MAX_LEN + 1)
+#define PATH_FMT "%" STR(PATH_MAX_LEN) "s"
+
 static void handle_client(int client_fd);
 static void send_404(int client_fd);
 static const char *get_mime_type(const char *path);
@@ -77,18 +85,38 @@ int main(void) {
 
 static void handle_client(int client_fd) {
     char request[REQUEST_BUFFER_SIZE];
-    ssize_t bytes_read = read(client_fd, request, sizeof(request) - 1);
+    size_t total_read = 0;
 
-    if (bytes_read <= 0) {
+    // Read until we find \r\n, \r\n\r\n, or buffer is full
+    while (total_read < sizeof(request) - 1) {
+        ssize_t bytes_read = read(client_fd, request + total_read, sizeof(request) - 1 - total_read);
+        if (bytes_read < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return;
+        }
+        if (bytes_read == 0) {
+            break;
+        }
+        total_read += (size_t)bytes_read;
+        request[total_read] = '\0';
+
+        // Check for end of request line or end of headers
+        if (strstr(request, "\r\n") || strstr(request, "\r\n\r\n")) {
+            break;
+        }
+    }
+
+    if (total_read == 0) {
         return;
     }
 
-    request[bytes_read] = '\0';
-
     char method[8];
-    char path[PATH_MAX];
+    char path[PATH_BUF_SIZE];
 
-    if (sscanf(request, "%7s %1023s", method, path) != 2) {
+    // Use consistent buffer size
+    if (sscanf(request, "%7s " PATH_FMT, method, path) != 2) {
         return;
     }
 
