@@ -1,9 +1,9 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O2 -pthread
 SRC_DIR = src
 TARGET = server
 
-SRCS = $(SRC_DIR)/server.c
+SRCS = $(SRC_DIR)/server.c $(SRC_DIR)/queue.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean
