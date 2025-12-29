@@ -11,8 +11,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <pthread.h>
+#include "queue.h"
 
 #define PORT 8080
+#define NUM_THREADS 4
+#define QUEUE_SIZE 16
 #define BACKLOG 10
 #define REQUEST_BUFFER_SIZE 4096
 #define FILE_BUFFER_SIZE 8192
@@ -25,10 +29,13 @@
 #define PATH_BUF_SIZE (PATH_MAX_LEN + 1)
 #define PATH_FMT "%" STR(PATH_MAX_LEN) "s"
 
+queue_t q;
+
 static void handle_client(int client_fd);
 static void send_404(int client_fd);
 static const char *get_mime_type(const char *path);
 static int send_all(int fd, const void *buf, size_t len);
+static void *worker_thread(void *arg);
 
 int main(void) {
     int server_fd;
@@ -68,6 +75,16 @@ int main(void) {
 
     printf("Server listening on port %d\n", PORT);
 
+    queue_init(&q, QUEUE_SIZE);
+
+    pthread_t threads[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&threads[i], NULL, worker_thread, NULL) != 0) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
+    }
+
     while (1) {
         int client_fd = accept(server_fd, NULL, NULL);
         if (client_fd < 0) {
@@ -81,6 +98,16 @@ int main(void) {
 
     close(server_fd);
     return 0;
+}
+
+static void *worker_thread(void *arg) {
+    (void)arg; // Unused
+    while (1) {
+        int client_fd = queue_pop(&q);
+        handle_client(client_fd);
+        close(client_fd);
+    }
+    return NULL;
 }
 
 static void handle_client(int client_fd) {
