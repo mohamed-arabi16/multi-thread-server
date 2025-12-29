@@ -1,14 +1,17 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -O2 -pthread
+CFLAGS = -Wall -Wextra -O2
 SRC_DIR = src
 TARGET = server
+
+SRCS = $(SRC_DIR)/server.c
+OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(SRC_DIR)/server.c
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRC_DIR)/server.c
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(OBJS)
