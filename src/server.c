@@ -92,8 +92,7 @@ int main(void) {
             continue;
         }
 
-        handle_client(client_fd);
-        close(client_fd);
+        queue_push(&q, client_fd);
     }
 
     close(server_fd);
