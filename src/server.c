@@ -18,7 +18,7 @@
 
 #define PORT 8080
 #define NUM_THREADS 4
-#define QUEUE_SIZE 16
+#define DEFAULT_QUEUE_SIZE 16
 #define BACKLOG 10
 #define REQUEST_BUFFER_SIZE 4096
 #define FILE_BUFFER_SIZE 8192
@@ -36,6 +36,7 @@ pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 int request_seq = 0;
 sched_policy_t scheduling_policy = QUEUE_FIFO;
 int num_threads = NUM_THREADS;
+int queue_size = DEFAULT_QUEUE_SIZE;
 
 static void send_response(request_t *req);
 static void send_404(int client_fd);
@@ -64,6 +65,10 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[i], "-t") == 0 && i + 1 < argc) {
              num_threads = atoi(argv[i+1]);
              if (num_threads < 1) num_threads = 1;
+             i++;
+        } else if ((strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--queue-size") == 0) && i + 1 < argc) {
+             queue_size = atoi(argv[i+1]);
+             if (queue_size < 1) queue_size = 1;
              i++;
         }
     }
@@ -100,10 +105,11 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Server listening on port %d with policy %s with %d threads\n",
-           PORT, scheduling_policy == QUEUE_FIFO ? "FIFO" : "SFF", num_threads);
+    printf("Server listening on port %d with policy %s with %d threads and queue size %d\n",
+           PORT, scheduling_policy == QUEUE_FIFO ? "FIFO" : "SFF", num_threads, queue_size);
+    fflush(stdout);
 
-    queue_init(&q, QUEUE_SIZE, scheduling_policy);
+    queue_init(&q, queue_size, scheduling_policy);
 
     pthread_t *threads = malloc(sizeof(pthread_t) * num_threads);
     int *thread_ids = malloc(sizeof(int) * num_threads);
