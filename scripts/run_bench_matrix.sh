@@ -24,13 +24,7 @@ QUEUE_SIZES=(1 4 16 64)
 
 # Define benchmark params
 N=2000
-PAR=10 # Reduced PAR to be safe for smaller queues/threads, or maybe use different PAR?
-# Spec says "run ./bench.sh N PAR ...". I'll stick to a reasonable default.
-# But for the matrix, maybe I should vary threads/queue and keep N/PAR constant.
-# Spec says: "multiple thread counts" and "multiple queue sizes" and "FIFO vs SFF".
-# It doesn't say I need to vary N or PAR in the loop, but record them.
-# The user spec says "effect of varying thread count" and "effect of varying queue size".
-# I'll stick to N=100, PAR=10 for all runs to isolate the server config effects.
+PAR=10
 
 URL="http://localhost:8080"
 FILES=("small.html" "medium.html" "large.html")
@@ -53,14 +47,6 @@ run_experiment() {
     # Run benchmark
     # Capture output to temporary file to parse
     OUTPUT=$(./bench.sh "$N" "$PAR" "$URL" "${FILES[@]}")
-
-    # Parse metrics
-    # bench.sh output format:
-    # Average Latency:  0.001234s
-    # Min Latency:      0.000123s
-    # Max Latency:      0.012345s
-    # Throughput:       123.45 req/sec
-    # Wall Time:        1.234s
 
     avg_lat=$(echo "$OUTPUT" | grep "Average Latency:" | awk '{print $3}' | sed 's/s//')
     min_lat=$(echo "$OUTPUT" | grep "Min Latency:" | awk '{print $3}' | sed 's/s//')
