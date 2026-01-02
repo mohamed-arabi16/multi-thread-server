@@ -186,14 +186,6 @@ static void parse_request(int client_fd, char *path_out) {
     // Initialize path to empty in case of failure
     path_out[0] = '\0';
 
-    // We peek first or just read.
-    // Spec says "Producer ... reads and parses".
-    // We need to read enough to get the request line.
-    // NOTE: This simple implementation might consume part of the body or subsequent requests,
-    // but for this assignment, we assume simple GET requests.
-    // Also, we must be careful not to block forever if client sends nothing.
-    // But assuming valid clients for now.
-
     while (total_read < sizeof(buffer) - 1) {
         ssize_t bytes_read = recv(client_fd, buffer + total_read, sizeof(buffer) - 1 - total_read, MSG_PEEK);
         if (bytes_read <= 0) break; // Error or closed
@@ -201,11 +193,6 @@ static void parse_request(int client_fd, char *path_out) {
         // Check if we have a full line
         char *newline = memchr(buffer + total_read, '\n', bytes_read);
         if (newline) {
-             // We found a newline. Now perform the actual read up to the end of headers or at least the first line.
-             // Actually, to keep it simple and consistent with previous handle_client:
-             // We read everything available or until \r\n\r\n.
-             // But wait, if we use MSG_PEEK, we haven't consumed it.
-             // We should consume it because the worker won't read it.
 
              // Let's just read.
              bytes_read = read(client_fd, buffer + total_read, sizeof(buffer) - 1 - total_read);
@@ -240,7 +227,6 @@ static void send_response(request_t *req) {
 
     if (path[0] == '\0') {
         // Invalid request or parse failure
-        // We could send 400, but let's just close or send 404
         return;
     }
 
@@ -252,7 +238,6 @@ static void send_response(request_t *req) {
         }
     }
 
-    // We already stat-ed in the producer, but we need to open it here.
     // We can rely on req->file_size to know if it's missing (-1).
     if (req->file_size == -1) {
         send_404(client_fd);
